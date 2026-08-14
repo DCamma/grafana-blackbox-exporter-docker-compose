@@ -1,0 +1,105 @@
+services:
+  prometheus:
+    build:
+      context: .
+      dockerfile: docker/prometheus/Dockerfile
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/prometheus/targets:/etc/prometheus/targets:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --tries=1 --spider http://localhost:9090/-/ready || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+          pids: 512
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  blackbox-exporter:
+    build:
+      context: .
+      dockerfile: docker/blackbox/Dockerfile
+    container_name: blackbox-exporter
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./config/blackbox/blackbox.yml:/config/blackbox.yml:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --tries=1 --spider http://localhost:9115/-/healthy || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+          pids: 256
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+
+  watcher:
+    build:
+      context: ./docker/watcher
+      dockerfile: Dockerfile
+    container_name: config-watcher
+    volumes:
+      - ./config:/config:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      blackbox-exporter:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+          pids: 64
+        reservations:
+          cpus: "0.05"
+          memory: 16M
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+          pids: 256
+        reservations:
+          cpus: "0.10"
+          memory: 128M
+
+volumes:
+  prometheus-data:
+  grafana-data:

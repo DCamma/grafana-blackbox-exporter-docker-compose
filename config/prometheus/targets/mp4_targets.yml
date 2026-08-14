@@ -1,0 +1,4 @@
+- targets:
+    - https://example.com/videos/sample.mp4
+  labels:
+    environment: dev
