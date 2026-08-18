@@ -6,6 +6,12 @@ A lightweight, on-demand local setup for running **Prometheus** and **Blackbox E
 
 ## 🚀 Quick Start
 
+Edit the target records in [config/prometheus/targets/http_targets.yml](config/prometheus/targets/http_targets.yml) 
+
+_OR_
+
+Define your custom target files in `config/prometheus/targets/*.yml` and add a blackbox configuration for the new file in [config/prometheus/prometheus.yml](config/prometheus/prometheus.yml) following the examples already there for the http targets or the mp4 targets.
+
 Since this setup is meant to run on-demand when needed:
 
 ### Start Services
